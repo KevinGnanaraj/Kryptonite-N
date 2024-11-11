@@ -12,3 +12,5 @@ n,train_acc,val_acc,optim_func,learning_rate,loss_func,epochs,batch_size,model_s
 9,0.648,0.646,Adagrad,0.5,BCE,30,50,"[9, 12, 9, 4, 1]"
 12,0.508,0.506,Adagrad,0.1,BCE,30,100,"[12, 12, 9, 4, 1]"
 12,0.602,0.598,Adagrad,0.1,BCE,30,10,"[12, 15, 10, 5, 1]"
+12,0.897,0.891,Adagrad,0.05,BCE,30,100,"[12, 15, 12, 4, 1]"
+12,0.926,0.922,Adagrad,0.07,BCE,50,100,"[12, 15, 12, 4, 1]"
