@@ -21,6 +21,17 @@ class KryptonitePipeline():
 
         x_raw = torch.tensor(np.load(x_file_path), dtype=torch.float32)
         y_raw = torch.tensor(np.load(y_file_path), dtype=torch.float32)
+
+        if self.n >= 24:
+            additional_x = 'Datasets/additional-kryptonite-' + str(self.n) + '-X.npy'
+            additional_y = 'Datasets/additional-kryptonite-' + str(self.n) + '-y.npy'
+
+            x_add = torch.tensor(np.load(additional_x), dtype=torch.float32)
+            y_add = torch.tensor(np.load(additional_y), dtype=torch.float32)
+
+            x_raw = torch.concat((x_raw, x_add))
+            y_raw = torch.concat((y_raw, y_add))
+
         row_count = x_raw.shape[0]
         print(f"Row count: {row_count}")
 
@@ -44,8 +55,6 @@ class KryptonitePipeline():
             X_val.to(self.device),
             y_val.to(self.device)
         )
-
-        print(len(X_val))
 
         self.loaders = {
             'train': torch.utils.data.DataLoader(
@@ -99,8 +108,59 @@ class KryptonitePipeline():
             print(f"Train accuracy is: {accuracy}")
 
         return accuracy
+    
+    def load_model(self, model_path):
+        loaded_model = torch.load(model_path).to(self.device)
 
-class KryptoniteModel(nn.Module):
+        print(f"Checking loaded model: {loaded_model}")
+
+        self.model = loaded_model
+
+class kryptonite_nn(nn.Module):
+    def __init__(self, model_struct):
+        super().__init__()
+        self.layer1 = nn.Linear(model_struct[0], model_struct[1])
+        self.act1 = nn.ReLU()
+        self.layer2 = nn.Linear(model_struct[1], model_struct[2])
+        self.act2 = nn.ReLU()
+        self.layer3 = nn.Linear(model_struct[2], model_struct[3])
+        self.act3= nn.ReLU()
+        self.output = nn.Linear(model_struct[3], model_struct[4])
+        self.act_output = nn.Sigmoid()
+ 
+    def forward(self, x):
+        x = self.act1(self.layer1(x))
+        x = self.act2(self.layer2(x))
+        x = self.act3(self.layer3(x))
+        x = self.act_output(self.output(x))
+        return x
+
+
+class KryptoniteModel_n30(nn.Module):
+    def __init__(self, structure):
+        super().__init__()
+        self.layer1 = nn.Linear(structure[0], structure[1])
+        self.act1 = nn.ReLU()
+        self.layer2 = nn.Linear(structure[1], structure[2])
+        self.act2 = nn.ReLU()
+        self.layer3 = nn.Linear(structure[2], structure[3])
+        self.act3 = nn.ReLU()
+        self.layer4 = nn.Linear(structure[3], structure[4])
+        self.act4 = nn.ReLU()
+        self.output = nn.Linear(structure[4], structure[5])
+        self.act_output = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.act1(self.layer1(x))
+        x = self.act2(self.layer2(x))
+        x = self.act3(self.layer3(x))
+        x = self.act4(self.layer4(x))
+        x = self.act_output(self.output(x))
+        
+        return x
+
+
+class KryptoniteModel_n12(nn.Module):
     def __init__(self, structure):
         super().__init__()
         self.layer1 = nn.Linear(structure[0], structure[1])
@@ -122,16 +182,18 @@ class KryptoniteModel(nn.Module):
 
 
 if __name__ == "__main__":
-    accuracy_thresholds = {9: 94.8, 12: 92.3, 15: 89.8, 18: 87.3, 24: 79.8, 30: 74.8, 45: 69.8}
-    device = ("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
-    n = 30
-    structure = [n, 42, 18, 6, 1]
+    accuracy_thresholds = {9: 95, 12: 92.5, 15: 90, 18: 87.3, 24: 79.8, 30: 74.8, 45: 69.8}
+    device = ('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Device is: {device}")
+    n = 9
+    # structure = [n, 64, 32, 16, 8, 1] # Testing for n=30
+    structure = [n, 15, 10, 4, 1]
     batch_size = 100
     lr = 0.07
-    epochs = 10000
+    epochs = 500
     loss_function = torch.nn.BCELoss()
-    model = KryptoniteModel(structure)
+    # model = KryptoniteModel_n30(structure)
+    model = KryptoniteModel_n12(structure)
     model.to(device)
     optimizer = torch.optim.Adagrad(model.parameters(), lr=lr)
     pipeline = KryptonitePipeline(
@@ -143,15 +205,23 @@ if __name__ == "__main__":
         epochs=epochs,
         device=device
     )
-
+    # pipeline.load_model(f"C:\\Users\\Martin\\AppData\\Local\\GitHubDesktop\\app-3.1.1\\home\\measterbrook2002\\Documents\\Kryptonite-N\\saved_models\\model_full_n15_s15_15_10_4_1.pth")
     pipeline.load_data()
     pipeline.train_model()
     train_acc = pipeline.evaluate_model(False)
-    val_acc = pipeline.evaluate_model(True)
+    test_acc = pipeline.evaluate_model(True)
+
+    # train_acc = pipeline.evaluate_model(False)
+    # val_acc = pipeline.evaluate_model(True)
 
     threshold = accuracy_thresholds[n]
+    threshold = threshold / 100
+    print(threshold)
 
-    if train_acc and val_acc > threshold:
-        print(f"Accuracy is above set threshold, saving weights: ")
-        model_dict_file_name = f"model_dict_{n}_{'-'.join(map(str, structure))}_{batch_size}_{lr}_{epochs}.pth"
-        model_full_file_name = f"model_full_{n}_{'-'.join(map(str, structure))}_{batch_size}_{lr}_{epochs}.pth"
+    # if train_acc >= threshold and test_acc >= threshold:
+    #     print(f"Accuracy is above set threshold, saving weights: ")
+    #     model_dict_file_name = f"saved_models/model_dict_n{n}_s{'-'.join(map(str, structure))}_{batch_size}_{lr}_{epochs}.pth"
+    #     model_full_file_name = f"saved_models/model_full_n{n}_s{'-'.join(map(str, structure))}_{batch_size}_{lr}_{epochs}.pth"
+
+    #     torch.save(model, model_full_file_name)
+    #     torch.save(model.state_dict(), model_dict_file_name)
