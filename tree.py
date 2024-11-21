@@ -2,13 +2,16 @@
 # Import necessary libraries
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+
+import matplotlib.pyplot as plt
+
 
 
 def load_data(n, val=False):
@@ -27,34 +30,42 @@ def load_data(n, val=False):
 
         return X_train, y_train, X_test, y_test
     
+    
 
 
 def train_model():
 
     # Load Data & Split the dataset into training and testing sets
-    X_train, y_train, X_test, y_test = load_data(n=9, val=False)
+    n=15
+    X_train, y_train, X_test, y_test = load_data(n, val=False)
 
-    # Preprocess Data (Features only)
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)   # Standardizing Features
-    X_test = scaler.transform(X_test)
+    # Feature Selection (Keep 100 best features based on statistical tests)
 
-    pca = PCA(n_components = 0.95)
-    # pca = PCA(n_components = 0.6)
-    X_train = pca.fit_transform(X_train)
-    X_test = pca.transform(X_test) 
+    i=11
+    pca = PCA(n_components = i)
+    X_train_pca = pca.fit_transform(X_train)
+    X_test_pca = pca.transform(X_test) 
 
-    tree = RandomForestClassifier(n_estimators=200, random_state=50, n_jobs=-1,  max_depth = None, min_samples_leaf= 1, min_samples_split=2)
-   
-    tree.fit(X_train, y_train)       ## Make predictions on the test set
-    y_pred = tree.predict(X_test)
+    rf_tree = RandomForestClassifier(n_estimators=2000, random_state=50, n_jobs=-1)
 
+
+    rf_tree.fit(X_train_pca, y_train)       ## Make predictions on the test set
+    y_pred = rf_tree.predict(X_test_pca)
 
     # Evaluate the model
-    print(f"Validation accuracy: {accuracy_score(y_test, y_pred)}")
+    print(f"Validation accuracy: {accuracy_score(y_test, y_pred)} for n={n} and n_components = {i}")
+
+
+    # Accuracy for different levels of dimensionality
+
+    # n_values = [9, 12, 15, 18]
+    # accuracy = [0.959, 0.945, 0.806, 0.5894]
+
+
 
 
 
 
 train_model()
+
     
